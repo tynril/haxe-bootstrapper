@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="Haxe Environment Bootstrapper" basedir="." default="main">
+	<description>
+		This script downloads the latest nightly-build version of Haxe as well
+		as the latest released version of Neko. It builds the Haxe-related tools
+		using this environment, and it configures as well the HAXEPATH and
+		NEKOPATH environment variables. It also adds those environment variables
+		to the user-wide PATH, to enable easy access to command line tools.
+	</description>
+	
+	<!-- Defining common properties. -->
+	<property name="haxe.path" location="${basedir}/haxe" />
+	<property name="neko.path" location="${basedir}/neko" />
+	
+	<!-- URL to download Haxe nightly builds -->
+	<property name="haxe.nightlies.url" value="http://haxe.cmt.tc/" />
+	
+	<!-- URL to download Neko builds -->
+	<property name="neko.windows.url"
+		value="http://nekovm.org/_media/neko-1.8.2-win.zip?id=download" />
+	
+	<!-- Loading local properties. -->
+	<property file="bootstrapper.properties" />
+	<property file="local.properties" />
+	
+	<!-- Main tasks -->
+	<target name="main" depends="getHaxe, getNeko, getTools, setPath">
+		<echo>Bootstrapping completed!</echo>
+	</target>
+	<target name="getHaxe" depends="downloadHaxe, setHaxeEnv" />
+	<target name="getNeko" depends="downloadNeko, setNekoEnv" />
+	<target name="getTools" depends="buildHaxeTools" />
+	
+	<!-- Check if the current OS is supported by the script. -->
+	<target name="checkOS">
+		<!-- Check if the script will work. -->
+		<echo>Checking if the bootstrapper can run on the local system...</echo>
+		<condition property="is.windows">
+			<os family="windows" />
+		</condition>
+		<fail unless="is.windows">
+			Error: only Windows is currently supported.
+		</fail>
+		
+		<!-- Defines platform-specific settings. -->
+		<condition property="exec.ext" value=".exe">
+			<isset property="is.windows" />
+		</condition>
+		<condition property="platform.name" value="windows">
+			<isset property="is.windows" />
+		</condition>
+	</target>
+	
+	<!-- Sets the right proxy settings, according to the configuration. -->
+	<target name="setProxy" if="http.proxy.host">
+		<echo>Setting proxy to ${http.proxy.host}:${http.proxy.port}...</echo>
+		<setproxy proxyhost="${http.proxy.host}"
+				  proxyport="${http.proxy.port}" />
+	</target>
+	
+	<!-- Download and deflate the latest Haxe nightly build. -->
+	<target name="downloadHaxe" depends="checkOS, setProxy">
+		<!-- Clear any previous download -->
+		<echo>Removing any previous Haxe installation...</echo>
+		<delete dir="${haxe.path}" includeemptydirs="true" />
+		<mkdir dir="${haxe.path}" />
+		
+		<!-- Loads the address of the latest nightly build. -->
+		<loadfile property="haxe.nightly.url">
+			<url url="${haxe.nightlies.url}/${platform.name}/?C=M;O=D" />
+			<filterchain>
+				<!--
+					Skipping 9 lines, which are the headers, and keeping only
+					one line of data, which is the latest build, because the
+					index returns the results sorted by date, most recent first.
+				-->
+				<headfilter skip="9" lines="1" />
+				
+				<!--
+					Filter out the line to keep only the name of the ZIP file.
+				-->
+				<tokenfilter>
+					<replaceregex pattern=".*(haxe_r\d+.zip).*" replace="\1" />
+				</tokenfilter>
+				
+				<!--
+					Adding the nightlies base address to the URL.
+				-->
+				<prefixlines prefix="${haxe.nightlies.url}/${platform.name}/" />
+			</filterchain>
+		</loadfile>
+		
+		<!-- Downloads the file. -->
+		<get src="${haxe.nightly.url}" dest="${basedir}/haxe_latest.zip" />
+		
+		<!-- Unzip it. -->
+		<unzip src="${basedir}/haxe_latest.zip" dest="${haxe.path}">
+			<!-- This mapper removes the 'bin' encapsulating directory. -->
+			<mapper>
+				<globmapper from="bin/*" to="*" handledirsep="yes" />
+			</mapper>
+		</unzip>
+		
+		<!-- Removes the ZIP archive. -->
+		<delete file="${basedir}/haxe_latest.zip" />
+	</target>
+	
+	<!-- Sets the environment variable for Haxe. -->
+	<target name="setHaxeEnv" depends="checkOS">
+		<echo>Setting the HAXEPATH environment variable...</echo>
+		<setenv name="HAXEPATH" value="${haxe.path}" />
+	</target>
+	
+	<!-- Downloads Neko. -->
+	<target name="downloadNeko" depends="checkOS, setProxy">
+		<!-- Clear any previous download -->
+		<echo>Removing any previous Neko installation...</echo>
+		<delete dir="${neko.path}" includeemptydirs="true" />
+		<mkdir dir="${neko.path}" />
+		
+		<!-- Get the right URL depending on the OS. -->
+		<condition property="neko.build.url" value="${neko.windows.url}">
+			<isset property="is.windows" />
+		</condition>
+		
+		<!-- Downloads the file. -->
+		<get src="${neko.build.url}"
+			 dest="${basedir}/neko_latest.zip" />
+		
+		<!-- Unzip it. -->
+		<unzip src="${basedir}/neko_latest.zip" dest="${neko.path}">
+			<!-- This mapper removes the 'neko-x.y.z-os' encapsulating directory. -->
+			<mapper>
+				<regexpmapper from="^neko-[\.\d]+-\w+/(.*)$"
+							  to="\1" handledirsep="yes" />
+			</mapper>
+		</unzip>
+		
+		<!-- Removes the ZIP archive. -->
+		<delete file="${basedir}/neko_latest.zip" />
+	</target>
+	
+	<!-- Sets the environment variable for Neko. -->
+	<target name="setNekoEnv" depends="checkOS">
+		<echo>Setting the NEKOPATH environment variable...</echo>
+		<setenv name="NEKOPATH" value="${neko.path}" />
+	</target>
+	
+	<!-- Builds the Haxe tools, haxelib and haxedoc. -->
+	<target name="buildHaxeTools" depends="checkOS, downloadHaxe, downloadNeko">
+		<!-- Builds haxelib. -->
+		<echo>Building haxelib...</echo>
+		<exec executable="${haxe.path}/haxe${exec.ext}"
+			  dir="${haxe.path}/std/tools/haxelib">
+			<env key="PATH" path="${haxe.path};${neko.path}" />
+			<arg value="haxelib.hxml" />
+		</exec>
+		<move file="${haxe.path}/std/tools/haxelib/haxelib${exec.ext}"
+			  todir="${haxe.path}" />
+		
+		<!-- Builds haxedoc. -->
+		<echo>Building haxedoc...</echo>
+		<exec executable="${haxe.path}/haxe${exec.ext}"
+			  dir="${haxe.path}/std/tools/haxedoc">
+			<env key="PATH" path="${haxe.path};${neko.path}" />
+			<arg value="haxedoc.hxml" />
+		</exec>
+		<move file="${haxe.path}/std/tools/haxedoc/haxedoc${exec.ext}"
+			  todir="${haxe.path}" />
+	</target>
+	
+	<!-- Sets the path environment variable to englobe Haxe and Neko. -->
+	<target name="setPath" depends="checkOS">
+		<echo>Adding Haxe and Neko to the path...</echo>
+		<antcall target="setPathWindows" />
+	</target>
+	
+	<!-- Sets the PATH variable on Windows. -->
+	<target name="setPathWindows" if="is.windows">
+		<!-- Gets the current value of the user PATH. -->
+		<exec executable="reg" failonerror="yes">
+			<arg value="query" />
+			<arg value="HKCU\Environment" />
+			<arg value="/v" />
+			<arg value="PATH" />
+			
+			<!--
+				Redirects the reg query output to the property, filtering it on
+				the way.
+			-->
+			<redirector outputproperty="oldPath.win">
+				<outputfilterchain>
+					<!-- Keeping only the line with the content. -->
+					<headfilter skip="2" lines="1" />
+					
+					<!-- Extract the content from the result line. -->
+					<tokenfilter>
+						<replaceregex pattern=".*_SZ\s+(.*)" replace="\1" />
+					</tokenfilter>
+					
+					<!-- Removes the existing Haxe/Neko path as well. -->
+					<tokenfilter>
+						<replacestring from="%HAXEPATH%" to="" />
+						<replacestring from="%NEKOPATH%" to="" />
+						<replacestring from=";;" to=";" />
+						<replaceregex pattern=";$" />
+					</tokenfilter>
+				</outputfilterchain>
+			</redirector>
+		</exec>
+		
+		<!-- Sets the environment variable. -->
+		<setenv name="PATH" value="${oldPath.win};%HAXEPATH%;%NEKOPATH%" />
+	</target>
+	
+	<!-- Macro: defines an environment variable. -->
+	<macrodef name="setenv">
+		<attribute name="name" />
+		<attribute name="value" />
+		<sequential>
+			<!-- On Windows, we use setx. -->
+			<exec executable="setx" outputproperty="null" failonerror="yes">
+				<arg value="@{name}" />
+				<arg value="@{value}" />
+			</exec>
+		</sequential>
+	</macrodef>
+</project>
