@@ -11,6 +11,7 @@
 	<!-- Defining common properties. -->
 	<property name="haxe.path" location="${basedir}/haxe" />
 	<property name="neko.path" location="${basedir}/neko" />
+	<property name="libs.path" location="${basedir}/libs" />
 	
 	<!-- URL to download Haxe nightly builds -->
 	<property name="haxe.nightlies.url" value="http://haxe.cmt.tc/" />
@@ -29,7 +30,7 @@
 	</target>
 	<target name="getHaxe" depends="downloadHaxe, setHaxeEnv" />
 	<target name="getNeko" depends="downloadNeko, setNekoEnv" />
-	<target name="getTools" depends="buildHaxeTools" />
+	<target name="getTools" depends="buildHaxeTools, configureHaxeLib" />
 	
 	<!-- Check if the current OS is supported by the script. -->
 	<target name="checkOS">
@@ -151,7 +152,7 @@
 		<!-- Builds haxelib. -->
 		<echo>Building haxelib...</echo>
 		<exec executable="${haxe.path}/haxe${exec.ext}"
-			  dir="${haxe.path}/std/tools/haxelib">
+			  dir="${haxe.path}/std/tools/haxelib" failonerror="yes">
 			<env key="PATH" path="${haxe.path};${neko.path}" />
 			<arg value="haxelib.hxml" />
 		</exec>
@@ -161,12 +162,21 @@
 		<!-- Builds haxedoc. -->
 		<echo>Building haxedoc...</echo>
 		<exec executable="${haxe.path}/haxe${exec.ext}"
-			  dir="${haxe.path}/std/tools/haxedoc">
+			  dir="${haxe.path}/std/tools/haxedoc" failonerror="yes">
 			<env key="PATH" path="${haxe.path};${neko.path}" />
 			<arg value="haxedoc.hxml" />
 		</exec>
 		<move file="${haxe.path}/std/tools/haxedoc/haxedoc${exec.ext}"
 			  todir="${haxe.path}" />
+	</target>
+	
+	<!-- Configure haxelib to point to the right path. -->
+	<target name="configureHaxeLib" depends="checkOS, buildHaxeTools">
+		<exec executable="${haxe.path}/haxelib${exec.ext}" failonerror="yes">
+			<env key="PATH" path="${haxe.path};${neko.path}" />
+			<arg value="setup" />
+			<arg value="${libs.path}" />
+		</exec>
 	</target>
 	
 	<!-- Sets the path environment variable to englobe Haxe and Neko. -->
