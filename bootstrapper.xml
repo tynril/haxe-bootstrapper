@@ -97,6 +97,9 @@
 						<replaceregex
 							pattern="ProductVersion:\s+(\d+)\.(\d+).*"
 							replace="\1.\2" />
+						
+						<!-- On MacOS X 10.7, we use 10.6 builds. -->
+						<replacestring from="10.7" to="10.6" />
 					</tokenfilter>
 					
 					<!-- Prefix the platform name to the version. -->

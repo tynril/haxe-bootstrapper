@@ -16,6 +16,7 @@ It was tested on the following platforms:
 
 *   Windows 7 
 *   MacOS X 10.6
+*   MacOS X 10.7 (uses 10.6 builds)
 
 How to make it work?
 --------------------
