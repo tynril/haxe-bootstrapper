@@ -30,6 +30,11 @@ And that's it, you're done. You might need to start a new command-line prompt or
 
 On MacOS X, you might be prompted for a password. This is your `sudo` password, and it is asked so the Bootstrapper can create symbolic links of Haxe in your `/usr/bin` directory.
 
+I'm behind a proxy, and it doesn't work!
+----------------------------------------
+
+You can configure your proxy settings by making a copy of the `local.properties.sample` file, named `local.properties`. Just edit that file, fill proxy informations, and the bootstrapper shall connect through the proxy to download Haxe and Neko.
+
 What happens exactly?
 ---------------------
 
