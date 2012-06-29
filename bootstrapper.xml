@@ -28,7 +28,10 @@
 	<!-- Main tasks -->
 	<target name="main" depends="getHaxe, getNeko, getTools, setPath">
 		<echo>Bootstrapping completed!</echo>
-		<echo>You might need to restart your current terminal for Haxe to work properly.</echo>
+		<echo>
+			You might need to restart your current terminal for Haxe to work
+			properly.
+		</echo>
 	</target>
 	<target name="prepare" depends="checkOS, setOSWindows, setOSMac" />
 	<target name="getHaxe" depends="downloadHaxe, setHaxeEnv" />
@@ -45,7 +48,7 @@
 		<condition property="is.mac">
 			<os family="mac" />
 		</condition>
-
+	
 		<!-- Fail early on unsupported OS. -->
 		<condition property="is.supported">
 			<or>
@@ -57,7 +60,7 @@
 			Error: this operating system isn't supported.
 		</fail>
 	</target>
-
+	
 	<!-- Set the specific properties for Windows. -->
 	<target name="setOSWindows" if="is.windows">
 		<property name="exec.ext" value=".exe" />
@@ -65,21 +68,21 @@
 		<property name="path.sep" value=";" />
 		<property name="platform.name" value="windows" />
 	</target>
-
+	
 	<!-- Set the specific properties for Mac OS X. -->
 	<target name="setOSMac" if="is.mac">
-		<!-- Check if the current user is not root, to avoid wrong user being set. -->
+		<!-- Ensure we're not root, to avoid wrong user being set. -->
 		<property environment="env" />
-		<fail message="Please run the bootstrapper as normal user (ant -f bootstrapper.xml).">
+		<fail message="Please do not 'sudo' the bootstrapper.">
 			<condition>
 				<equals arg1="${env.USER}" arg2="root" />
 			</condition>
 		</fail>
-
+		
 		<property name="exec.ext" value="" />
 		<property name="arch.ext" value=".tar.gz" />
 		<property name="path.sep" value=":" />
-
+		
 		<!-- Get the platform name with the MacOS X version number. -->
 		<exec executable="sw_vers" failonerror="yes">
 			<redirector outputproperty="platform.name">
@@ -88,12 +91,14 @@
 					<linecontains>
 						<contains value="ProductVersion" />
 					</linecontains>
-
+					
 					<!-- Keeps only major and minor version (ex 10.6) -->
 					<tokenfilter>
-						<replaceregex pattern="ProductVersion:\s+(\d+)\.(\d+).*" replace="\1.\2" />
+						<replaceregex
+							pattern="ProductVersion:\s+(\d+)\.(\d+).*"
+							replace="\1.\2" />
 					</tokenfilter>
-
+					
 					<!-- Prefix the platform name to the version. -->
 					<prefixlines prefix="osx" />
 				</outputfilterchain>
@@ -114,7 +119,7 @@
 		<echo>Removing any previous Haxe installation...</echo>
 		<delete dir="${haxe.path}" includeemptydirs="true" />
 		<mkdir dir="${haxe.path}" />
-
+		
 		<!-- Loads the address of the latest nightly build. -->
 		<loadfile property="haxe.nightly.url">
 			<url url="${haxe.nightlies.url}/${platform.name}/?C=M;O=D" />
@@ -133,7 +138,9 @@
 					Filter out the line to keep only the name of the ZIP file.
 				-->
 				<tokenfilter>
-					<replaceregex pattern=".*(haxe_r\d+${arch.ext}).*" replace="\1" />
+					<replaceregex
+						pattern=".*(haxe_r\d+${arch.ext}).*"
+						replace="\1" />
 				</tokenfilter>
 				
 				<!--
@@ -142,9 +149,10 @@
 				<prefixlines prefix="${haxe.nightlies.url}/${platform.name}/" />
 			</filterchain>
 		</loadfile>
-
+		
 		<!-- Downloads the file. -->
-		<get src="${haxe.nightly.url}" dest="${basedir}/haxe_latest${arch.ext}" />
+		<get src="${haxe.nightly.url}"
+			 dest="${basedir}/haxe_latest${arch.ext}" />
 		
 		<!-- Unzip it. -->
 		<antcall target="deflateHaxeWin" />
@@ -152,34 +160,35 @@
 		
 		<!-- Removes the ZIP archive. -->
 		<delete file="${basedir}/haxe_latest${arch.ext}" />
-
+		
 		<!-- Gives execution rights to the Haxe binary. -->
 		<chmod file="${haxe.path}/haxe${exec.ext}" perm="ugo+rx" />
 	</target>
-
+	
 	<!-- Deflates the Haxe archive on Windows. -->
 	<target name="deflateHaxeWin" if="is.windows">
 		<unzip src="${basedir}/haxe_latest${arch.ext}" dest="${haxe.path}">
-                        <!-- This mapper removes the 'bin' encapsulating directory. -->
-                        <mapper>
-                                <globmapper from="bin/*" to="*" handledirsep="yes" />
-                        </mapper>
-                </unzip>
+			<!-- This mapper removes the 'bin' encapsulating directory. -->
+			<mapper>
+				<globmapper from="bin/*" to="*" handledirsep="yes" />
+			</mapper>
+		</unzip>
 	</target>
-
+	
 	<!-- Deflates the Haxe archive on MacOS. -->
 	<target name="deflateHaxeMac" if="is.mac">
-		<untar compression="gzip" src="${basedir}/haxe_latest${arch.ext}" dest="${haxe.path}">
-                        <!-- This mapper removes the 'bin' encapsulating directory. -->
-                        <mapper>
-                                <globmapper from="bin/*" to="*" handledirsep="yes" />
-                        </mapper>
-                </untar>
+		<untar compression="gzip"
+			   src="${basedir}/haxe_latest${arch.ext}" dest="${haxe.path}">
+			<!-- This mapper removes the 'bin' encapsulating directory. -->
+			<mapper>
+					<globmapper from="bin/*" to="*" handledirsep="yes" />
+			</mapper>
+		</untar>
 	</target>
 	
 	<!-- Sets the environment variable for Haxe. -->
 	<target name="setHaxeEnv" depends="prepare">
-		<echo>Setting HAXEPATH and HAXE_LIBRARY_PATH environment variables...</echo>
+		<echo>Setting HAXEPATH/HAXE_LIBRARY_PATH environment variables...</echo>
 		<setenv name="HAXEPATH" value="${haxe.path}" />
 		<setenv name="HAXE_LIBRARY_PATH" value="${haxe.path}/std${path.sep}." />
 	</target>
@@ -216,27 +225,28 @@
 		<chmod file="${neko.path}/nekoml${exec.ext}" perm="ugo+rx" />
 		<chmod file="${neko.path}/nekotools${exec.ext}" perm="ugo+rx" />
 	</target>
-
+	
 	<!-- Deflates Neko on Windows. -->
 	<target name="deflateNekoWin" if="is.windows">
 		<unzip src="${basedir}/neko_latest${arch.ext}" dest="${neko.path}">
-                        <!-- This mapper removes the 'neko-x.y.z-os' encapsulating directory. -->
-                        <mapper>
-                                <regexpmapper from="^neko-[\.\d]+-\w+/(.*)$"
-                                                          to="\1" handledirsep="yes" />
-                        </mapper>
-                </unzip>
+			<!-- This mapper removes the 'neko' encapsulating directory. -->
+			<mapper>
+				<regexpmapper from="^neko-[\.\d]+-\w+/(.*)$"
+							  to="\1" handledirsep="yes" />
+			</mapper>
+		</unzip>
 	</target>
-
+	
 	<!-- Deflates Neko on MacOS. -->
 	<target name="deflateNekoMac" if="is.mac">
-		<untar compression="gzip" src="${basedir}/neko_latest${arch.ext}" dest="${neko.path}">
-                        <!-- This mapper removes the 'neko-x.y.z-os' encapsulating directory. -->
-                        <mapper>
-                                <regexpmapper from="^neko-[\.\d]+-\w+/(.*)$"
-                                                          to="\1" handledirsep="yes" />
-                        </mapper>
-                </untar>
+		<untar compression="gzip"
+			   src="${basedir}/neko_latest${arch.ext}" dest="${neko.path}">
+			<!-- This mapper removes the 'neko' encapsulating directory. -->
+			<mapper>
+				<regexpmapper from="^neko-[\.\d]+-\w+/(.*)$"
+							  to="\1" handledirsep="yes" />
+			</mapper>
+		</untar>
 	</target>
 	
 	<!-- Sets the environment variable for Neko. -->
@@ -247,12 +257,13 @@
 		<!-- Creates library symlink when needed. -->
 		<antcall target="createNekoSymlinkMac" />
 	</target>
-
+	
 	<!-- Create Neko library symlink on Mac. -->
 	<target name="createNekoSymlinkMac" if="is.mac">
-		<symlink source="${neko.path}/libneko.dylib" target="/usr/lib/libneko.dylib" />
+		<symlink source="${neko.path}/libneko.dylib"
+				 target="/usr/lib/libneko.dylib" />
 	</target>
-
+	
 	<!-- Builds the Haxe tools, haxelib and haxedoc. -->
 	<target name="buildHaxeTools" depends="prepare, getHaxe, getNeko">
 		<!-- Builds haxelib. -->
@@ -336,14 +347,14 @@
 		<!-- Sets the environment variable. -->
 		<setenv name="PATH" value="${oldPath.win};%HAXEPATH%;%NEKOPATH%" />
 	</target>
-
+	
 	<!-- Adds symlink to the Haxe and Neko tools. -->
 	<target name="setPathMac" if="is.mac">
 		<!-- Symlinking Haxe. -->
 		<symlink source="${haxe.path}/haxe" target="/usr/bin/haxe" />
 		<symlink source="${haxe.path}/haxelib" target="/usr/bin/haxelib" />
 		<symlink source="${haxe.path}/haxedoc" target="/usr/bin/haxedoc" />
-
+		
 		<!-- Symlinking Neko. -->
 		<symlink source="${neko.path}/neko" target="/usr/bin/neko" />
 		<symlink source="${neko.path}/nekoc" target="/usr/bin/nekoc" />
@@ -357,11 +368,12 @@
 		<attribute name="value" />
 		<sequential>
 			<!-- On Windows, we use setx. -->
-			<exec osfamily="windows" executable="setx" outputproperty="null" failonerror="yes">
+			<exec osfamily="windows" executable="setx" outputproperty="null"
+				  failonerror="yes">
 				<arg value="@{name}" />
 				<arg value="@{value}" />
 			</exec>
-
+			
 			<!-- On MacOS, we use launchctl. -->
 			<exec osfamily="mac" executable="launchctl" failonerror="yes">
 				<arg value="setenv" />
@@ -370,7 +382,7 @@
 			</exec>
 		</sequential>
 	</macrodef>
-
+	
 	<!-- Macro: creates a symlink. Mac only. -->
 	<macrodef name="symlink">
 		<attribute name="source" />
@@ -381,7 +393,7 @@
 				<arg value="rm" />
 				<arg value="@{target}" />
 			</exec>
-
+			
 			<!-- Creates the link. -->
 			<exec osfamily="mac" executable="sudo" failonerror="yes">
 				<arg value="ln" />
